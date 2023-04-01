@@ -4,14 +4,20 @@ void blink(int, int); // blink the LEDs function
 
 int main(void) {
   char message[100];
+  unsigned short numBlinks = 0;
+  unsigned long blinkMs = 0;
   
   NU32DIP_Startup(); // cache on, interrupts on, LED/button init, UART init
   while (1) {
     NU32DIP_ReadUART1(message, 100); // wait here until get message from computer
+    sscanf(message, "%d %d", &numBlinks, &blinkMs);
+    
+    sprintf(message, "Blinking %d times for %ld ms each", numBlinks, blinkMs);
     NU32DIP_WriteUART1(message); // send message back
     NU32DIP_WriteUART1("\r\n"); // carriage return and newline
+    
 	if (NU32DIP_USER){
-		blink(5, 500); // 5 times, 500ms each time
+		blink(numBlinks, blinkMs);
 	}
   }
 }
