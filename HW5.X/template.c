@@ -38,7 +38,5 @@ int main(void) {
 	
 void wait(float waitMs) {
     unsigned long t = _CP0_GET_COUNT(); 
-    // the core timer ticks at half the SYSCLK, so 24000000 times per second
-    // so each millisecond is 24000 ticks
-    while(_CP0_GET_COUNT() < t + 24000*waitMs){}
+    while(_CP0_GET_COUNT() < t + 48000*waitMs){}
 }
