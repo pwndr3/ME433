@@ -2,6 +2,7 @@
 #include "ssd1306.h"
 
 void drawChar(unsigned char x, unsigned char y, unsigned char character) {
+    // Draw single character as pixel position x,y
     char char_idx = character - 0x20; // First character is SPACE 0x20
     
     unsigned char xi, yi;
@@ -16,6 +17,7 @@ void drawChar(unsigned char x, unsigned char y, unsigned char character) {
 }
 
 void drawString(unsigned char x, unsigned char y, unsigned char string[]) {
+    // Draw string starting at pixel x,y
     unsigned char xi, i;
     for (xi = x, i = 0; string[i] != '\0'; xi += CHAR_WIDTH, i++) {
         drawChar(xi, y, string[i]);
@@ -23,11 +25,11 @@ void drawString(unsigned char x, unsigned char y, unsigned char string[]) {
 }
 
 void drawMessage(unsigned char line, unsigned char message[]) {
-    // line 0-3
+    // Draw left-justified message on line 0 to 3
     drawString(0, line * CHAR_HEIGHT, message);
 }
 
 void drawMessageRight(unsigned char line, unsigned char message[]) {
-    // line 0-3
+    // Draw right-justified message on line 0 to 3 
     drawString((MAX_CHARS_PER_ROW - strlen(message)) * CHAR_WIDTH, line * CHAR_HEIGHT, message);
 }

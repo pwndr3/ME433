@@ -18,8 +18,7 @@ int main(void) {
             
 	// floats to store the data
     float az, fps;
-    
-    char color = 1;
+
     while (1) {
         _CP0_SET_COUNT(0);
 

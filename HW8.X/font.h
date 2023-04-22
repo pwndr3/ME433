@@ -1,7 +1,7 @@
 #ifndef FONT_H__
 #define FONT_H__
 
-#include <stdio.h>
+#include <string.h>
 
 // make these functions:
 void drawChar(unsigned char x, unsigned char y, unsigned char character);
