@@ -113,6 +113,11 @@ def color_from_pixel(pixel):
 def rgb_to_grayscale(r,g,b):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
+def send_arr(arr):
+    for x in arr:
+        print(x)
+    print("END")
+
 class LineDetector:
     THRESHOLD = 50
 
@@ -121,23 +126,6 @@ class LineDetector:
         self.COM = 0
 
     def update(self, bitmap):
-        # DEBUG - convert image to grayscale
-        """
-        for i in range(cam.width):
-            for j in range(cam.height):
-                r, g, b, bright = color_from_pixel(bitmap[i, j])
-                gray = int(rgb_to_grayscale(r,g,b))
-
-                if gray > self.THRESHOLD:
-                    gray = 0xFF
-                else:
-                    gray = 0
-
-                bitmap[i, j] = int(gray) & 0x1F
-        """
-
-        # TODO - plot image on computer to see if makes sense
-
         # Acquire red line
         reds = []
         for i in range(cam.height):
@@ -161,7 +149,7 @@ class LineDetector:
 
         # Edge
         filter = np.array([1,0,-1])
-        reds = np.convolve(reds, filter)[1:-1]
+        reds = np.convolve(reds, filter)[1:-2]
 
         # Find center of mass, with threshold
         idxs = []
@@ -179,16 +167,11 @@ class LineDetector:
         COM = idxs[int(COM)]
         self.COM = COM
 
-        # Draw line
-        for i in range(cam.height):
-            bitmap[self.row, i] = int(reds[i]) & 0x1F
-
-        # Compute COM
-        #COM = 0
-        #for i, pixel in enumerate(grayscale):
-        #    COM += i * pixel
-        #COM /= sum(grayscale)
-        #self.COM = COM
+        # Highlight line - normalize to 0x1F
+        reds /= np.max(reds)
+        reds *= 0x1F
+        for i, red in enumerate(reds):
+            bitmap[self.row, i] = int(red) & 0x1F
 
         # Draw red dot at COM
         bitmap[self.row, COM] = 0x3F<<5
@@ -204,7 +187,7 @@ while True:
 
     # Process image
     detector.update(bitmap)
-    detector.print_value()
+    #detector.print_value()
 
     # Refresh
     bitmap.dirty()
