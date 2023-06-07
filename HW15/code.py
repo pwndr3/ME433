@@ -113,6 +113,11 @@ def color_from_pixel(pixel):
 def rgb_to_grayscale(r,g,b):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
+def send_arr(arr):
+    for x in arr:
+        print(x)
+    print("END")
+
 class LineDetector:
     THRESHOLD = 50
 
@@ -121,48 +126,62 @@ class LineDetector:
         self.COM = 0
 
     def update(self, bitmap):
-        # DEBUG - convert image to grayscale
-        """
-        for i in range(cam.width):
-            for j in range(cam.height):
-                r, g, b, bright = color_from_pixel(bitmap[i, j])
-                gray = int(rgb_to_grayscale(r,g,b))
-
-                if gray > self.THRESHOLD:
-                    gray = 0xFF
-                else:
-                    gray = 0
-
-                bitmap[i, j] = int(gray) & 0x1F
-        """
-
-        # Line detection at given row
-        grayscale = []
+        # Acquire red line
+        reds = []
         for i in range(cam.height):
             r, g, b, bright = color_from_pixel(bitmap[self.row, i])
+            reds.append(r)
+        reds = np.array(reds)
 
-            # Apply threshold
-            gray = rgb_to_grayscale(r,g,b)
-            if gray > self.THRESHOLD:
-                gray = 0xFF
-            else:
-                gray = 0
-            grayscale.append(gray)
+        # Average
+        #filter = np.array([1,4,7,4,1])
+        #filter /= sum(filter)
+        #grayscale = np.convolve(grayscale, filter)[2:-2]
 
-        # Compute COM
+        # Cumulative sum
+        # Edges appear as big spikes instead of square pulse
+        reds_cumsum = []
+        s = 0
+        for r in reds:
+            s += r
+            reds_cumsum.append(s)
+        reds = np.array(reds_cumsum)
+
+        # Edge
+        filter = np.array([1,0,-1])
+        reds = np.convolve(reds, filter)[1:-2]
+
+        # Find center of mass, with threshold
+        idxs = []
+        avg = np.mean(reds)
+        for i, r in enumerate(reds):
+            if r > avg:
+                idxs.append(i)
+
         COM = 0
-        for i, pixel in enumerate(grayscale):
-            COM += i * pixel
-        COM /= sum(grayscale)
+        s = 0
+        for i, idx in enumerate(idxs):
+            COM += i * reds[idx]
+            s += reds[idx]
+        COM /= s
+        COM = idxs[int(COM)]
         self.COM = COM
 
+        # Highlight line - normalize to 0x1F
+        for i, r in enumerate(reds):
+            if r > avg:
+                bitmap[self.row, i] = 0x1F
+            else:
+                bitmap[self.row, i] = 0
+
         # Draw red dot at COM
-        bitmap[self.row, int(COM)] = 0x3F<<5
+        bitmap[self.row, COM] = 0x3F<<5
 
     def print_value(self):
         print((self.COM,))
 
-detector = LineDetector(40)
+row = 40
+detector = LineDetector(row)
 
 while True:
     cam.capture(bitmap)
