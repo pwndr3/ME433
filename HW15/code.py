@@ -19,6 +19,7 @@ from adafruit_ov7670 import (
     OV7670_SIZE_DIV8,
     OV7670_SIZE_DIV16,
 )
+from ulab import numpy as np
 
 release_displays()
 spi = busio.SPI(clock=board.GP2, MOSI=board.GP3)
@@ -86,12 +87,93 @@ tg = TileGrid(
 g.append(tg)
 display.show(g)
 
-t0 = time.monotonic_ns()
+#t0 = time.monotonic_ns()
 display.auto_refresh = False
+
+reds = np.zeros(cam.height,dtype=np.uint16)
+greens = np.zeros(cam.height,dtype=np.uint16)
+blues = np.zeros(cam.height,dtype=np.uint16)
+bright = np.zeros(cam.height)
+
+def _r(pixel):
+    return ((pixel >> 5)&0x3F)/0x3F*100
+def _g(pixel):
+    return ((pixel)&0x1F)/0x1F*100
+def _b(pixel):
+    return (pixel >> 11)/0x1F*100
+def _brightness(pixel):
+    return _b(pixel) + _r(pixel) + _g(pixel)
+def color_from_pixel(pixel):
+    return np.array((
+        _r(pixel),
+        _g(pixel),
+        _b(pixel),
+        _brightness(pixel)
+        ))
+def rgb_to_grayscale(r,g,b):
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+class LineDetector:
+    THRESHOLD = 50
+
+    def __init__(self, row):
+        self.row = row
+        self.COM = 0
+
+    def update(self, bitmap):
+        # DEBUG - convert image to grayscale
+        """
+        for i in range(cam.width):
+            for j in range(cam.height):
+                r, g, b, bright = color_from_pixel(bitmap[i, j])
+                gray = int(rgb_to_grayscale(r,g,b))
+
+                if gray > self.THRESHOLD:
+                    gray = 0xFF
+                else:
+                    gray = 0
+
+                bitmap[i, j] = int(gray) & 0x1F
+        """
+
+        # Line detection at given row
+        grayscale = []
+        for i in range(cam.height):
+            r, g, b, bright = color_from_pixel(bitmap[self.row, i])
+
+            # Apply threshold
+            gray = rgb_to_grayscale(r,g,b)
+            if gray > self.THRESHOLD:
+                gray = 0xFF
+            else:
+                gray = 0
+            grayscale.append(gray)
+
+        # Compute COM
+        COM = 0
+        for i, pixel in enumerate(grayscale):
+            COM += i * pixel
+        COM /= sum(grayscale)
+        self.COM = COM
+
+        # Draw red dot at COM
+        bitmap[self.row, int(COM)] = 0x3F<<5
+
+    def print_value(self):
+        print((self.COM,))
+
+detector = LineDetector(40)
+
 while True:
     cam.capture(bitmap)
+
+    # Process image
+    detector.update(bitmap)
+    detector.print_value()
+
+    # Refresh
     bitmap.dirty()
     display.refresh(minimum_frames_per_second=0)
-    t1 = time.monotonic_ns()
-    print("fps", 1e9 / (t1 - t0))
-    t0 = t1
+    #t1 = time.monotonic_ns()
+    #print("fps", 1e9 / (t1 - t0))
+    #t0 = t1
