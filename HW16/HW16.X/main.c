@@ -15,16 +15,21 @@ int main(void) {
     setup_pico();
     
     char message[100];
-    int motor, direction;
-    float speed;
+    float COM;
+    
+    
     while (1) {
         _CP0_SET_COUNT(0);
 
         //write_pico("Test\r\n");
         
         read_pico(message, 100);
-        sscanf(message, "%d %d %f", &motor, &direction, &speed);
-        set_motor_speed(motor, direction, speed);
+        sscanf(message, "%f", &COM);
+        float error = COM - 30;
+        
+        NU32DIP_WriteUART1(message);
+        
+        //set_motor_speed(motor, direction, speed);
         
         /*
         NU32DIP_ReadUART1(message, 99);
